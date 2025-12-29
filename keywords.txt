@@ -1,0 +1,29 @@
+#######################################
+# Datatypes (Classes)	KEYWORD1
+#######################################
+Button	KEYWORD1
+Led	KEYWORD1
+SimpleTimer	KEYWORD1
+SignalFilter	KEYWORD1
+TaskManager	KEYWORD1
+SerialCommander	KEYWORD1
+
+#######################################
+# Methods and Functions	KEYWORD2
+#######################################
+
+begin	KEYWORD2
+isPressed	KEYWORD2
+isHeld	KEYWORD2
+turnOn	KEYWORD2
+turnOff	KEYWORD2
+toggle	KEYWORD2
+blink	KEYWORD2
+setInterval	KEYWORD2
+isReady	KEYWORD2
+reset	KEYWORD2
+filter	KEYWORD2
+addTask	KEYWORD2
+run	KEYWORD2
+addCommand	KEYWORD2
+check	KEYWORD2
