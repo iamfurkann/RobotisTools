@@ -176,12 +176,3 @@ If you want, I can add a basic CONTRIBUTING.md with a checklist and a simple tes
 This project is licensed under the Apache License 2.0 — see the bundled `LICENSE` file for details.
 
 ---
-
-Maintainer: Furkan (iamfurkann)
-
-If you'd like, I can also:
-- Generate a short English API reference extracted from headers
-- Create a separate `README.tr.md` with the Turkish content preserved
-- Add short descriptions to each example file automatically
-
-Tell me which of these you'd like next and I'll proceed.
