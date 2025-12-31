@@ -1,180 +1,130 @@
-# RobotisTools
+  RobotisTools Framework
+RobotisTools is a professional, modular, and event-driven C++ framework designed for embedded robotics. It transforms standard linear Arduino code into a robust Mini-OS architecture.
 
-**RobotisTools** is a high-performance, modular C++ library designed to streamline embedded systems development. It abstracts complex non-blocking logic into a clean, **Event-Driven architecture**.
+Originally optimized for Robotis OpenCM9.04, this library is fully cross-platform and compatible with any Arduino-based hardware (AVR, ESP32, STM32, Teensy).
 
-Originally optimized for **Robotis OpenCM9.04** boards, this library is fully compatible with any Arduino-based hardware (**AVR, ESP32, STM32, Teensy**).
+The Problem: Standard Arduino code often becomes "spaghetti code" when managing multiple sensors, motors, and serial commands simultaneously using delay().
 
----
+The Solution: RobotisTools provides a Cooperative Task Scheduler, a Safe Command Line Interface, and Non-blocking Hardware Drivers to handle complex robotic tasks effortlessly.
 
-## Why this library?
+  System Architecture
+The library is organized into three logical layers:
 
-Writing non-blocking code (avoiding `delay()`) is hard. Managing multiple tasks, parsing Serial commands, and debouncing buttons usually results in **"spaghetti code."**
+Layer	Modules	Description
+1. CORE	RobotisApp, TaskManager, Logger, SerialCommander	The brain of the system. Manages tasks, logs, and CLI commands.
+2. HARDWARE	Button, Led, SmartAnalog, AsyncSonar, BatteryMonitor	Intelligent drivers for physical components. Handles debounce, hysteresis, and async triggers.
+3. UTILITIES	FastPID, DiffDrive, SignalFilter, ConfigStore, SimpleTimer	Pure mathematical and helper classes for control theory, filtering, and data storage.
+🚀 Quick Start
+Here is a complete example showing how to set up a multitasking robot system.
 
-**RobotisTools** solves this by providing a lightweight **"Mini-OS"** structure for your projects.
-
----
-
-## Key Features
-
-| Module | Description |
-|------|------------|
-| **Task Manager** | A cooperative scheduler to run functions periodically without blocking the CPU. |
-| **Serial Commander** | A safe, buffer-overflow-protected CLI (Command Line Interface) for Serial control. |
-| **Button Engine** | Handles debouncing, state changes, and Long Press / Hold detection natively. |
-| **Async LED** | Control LEDs (Blink, Toggle) asynchronously. Fire and forget. |
-| **Signal Filter** | Implements a Moving Average Filter to smooth out noisy sensor data. |
-| **Simple Timer** | A clean wrapper for `millis()` to handle custom periodic events. |
-
----
-
-## Installation
-
-1. Download the latest release as a **.ZIP** file  
-2. Open **Arduino IDE**  
-3. Go to **Sketch → Include Library → Add .ZIP Library...**  
-4. Select the downloaded file  
-5. Restart Arduino IDE  
-
----
-
-## Quick Start
-
-Here is a complete example of a multi-tasking system with button control and serial commands.
-
-```cpp
+C++
 #include <RobotisTools.h>
 
-// 1. Define Hardware
+// 1. Initialize the Kernel (App)
+RobotisApp app(115200); // Set baud rate
+
+// 2. Define Hardware
 Led statusLed(BOARD_LED_PIN);
 Button userBtn(BOARD_BUTTON_PIN);
 
-// 2. Define Managers
-TaskManager os;
-SerialCommander cli;
-
-// --- Tasks ---
-void toggleLedTask() {
+// 3. Define Logic
+void blinkTask() {
     statusLed.toggle();
 }
 
 void reportTask() {
-    Serial.print("[SYSTEM] Uptime: ");
-    Serial.println(millis() / 1000);
+    // Uses the internal Logger module
+    app.log("System Uptime (sec)", millis() / 1000);
 }
 
-// --- Commands ---
 void cmdStop() {
-    // Logic to stop system...
-    Serial.println("System Stopped via Serial.");
+    app.log(">> Emergency Stop Command Received!");
+    statusLed.turnOff();
 }
 
 void setup() {
+    // Start System & Hardware
+    app.begin();
     statusLed.begin();
     userBtn.begin();
-    cli.begin(9600);
 
-    // Run LED toggle every 500ms
-    os.addTask(toggleLedTask, 500);
-    // Report status every 2 seconds
-    os.addTask(reportTask, 2000);
+    // Schedule Tasks (No delay!)
+    app.addTask(blinkTask, 500);   // Blink every 500ms
+    app.addTask(reportTask, 2000); // Report every 2 seconds
 
     // Register Serial Command
-    cli.addCommand("stop", cmdStop);
+    app.addCommand("stop", cmdStop);
 }
 
 void loop() {
-    // The loop remains clean!
-    os.run();
-    cli.check();
-
-    // Handle physical button
+    // [CRITICAL] The System Heartbeat
+    app.update();
+    
+    // Manual Override
     if (userBtn.isPressed()) {
-        Serial.println("Button Clicked!");
+        app.log("Manual Button Override!");
     }
 }
-```
+  Core Concepts
+The app.update() Heartbeat
 
----
+Unlike standard Arduino sketches, RobotisTools relies on a Cooperative Scheduler.
 
-## Documentation & API
+You must call app.update() inside loop().
 
-### 1. Task Manager (Cooperative Multitasking)
+This function acts as the "Operating System." It checks if any task needs to run, processes incoming Serial commands, and manages internal timers.
 
-Replaces `delay()` based loops.
+Do not use delay() inside your tasks, as it will pause the entire system "heartbeat."
 
-- `addTask(callback, interval)`  
-  Schedules a `void function()` to run every **interval** milliseconds.
+The RobotisApp Kernel
 
-- `run()`  
-  Must be called inside `loop()`. Checks and executes tasks.
+Instead of managing the TaskManager, Logger, and SerialCommander separately, the RobotisApp class acts as a Facade. You control the entire system through the app object.
 
----
+📚 Module Reference
+🔌 Hardware Drivers
 
-### 2. Serial Commander (CLI)
+Button: Handles debouncing (noise filtering) and detects Long Press / Hold events.
 
-Parses text commands from the Serial Monitor safely.  
-No `String` objects used to prevent memory fragmentation.
+SmartAnalog: Implements Schmitt Trigger (Hysteresis) logic to prevent sensor flickering at threshold levels. Auto-detects 10-bit vs 12-bit ADC.
 
-- `addCommand("name", callback)`  
-  Binds a text command to a function.
+BatteryMonitor: Reads battery voltage via a divider, applies a noise filter, and calculates remaining percentage (0-100%).
 
-> **Note:** Commands are case-sensitive  
-> (`"start"` ≠ `"START"`)
+AsyncSonar: A non-blocking driver for HC-SR04 ultrasonic sensors. Uses a state machine for triggering.
 
-- `check()`  
-  Listen for incoming data. Call this in `loop()`.
+Led: Asynchronous control (Toggle, Blink) without blocking execution.
 
----
+🛠️ Utilities & Math
 
-### 3. Button
+FastPID: A high-performance PID controller with Integral Windup Guard and Derivative on Measurement to prevent kicks.
 
-Advanced input handling.
+DiffDrive: Computes kinematics for tank-drive/differential robots. Converts Joystick (X, Y) to Left/Right motor speeds with Deadband support.
 
-- `isPressed()`  
-  Returns `true` on a valid click (Rising Edge + Debounce).
+SignalFilter: Implements a Moving Average Filter to smooth out noisy sensor data.
 
-- `isHeld(duration)`  
-  Returns `true` if the button is held down for **duration (ms)**.
+ConfigStore: A C++ Template class to save/load complex data structures (Structs) to EEPROM effortlessly.
 
----
+  System Core
 
-### 4. Signal Filter
+SerialCommander: Parses text commands from Serial Monitor (e.g., "start", "set_pid"). Uses fixed buffers to prevent Heap Fragmentation (No String usage).
 
-Essential for analog sensors (LDR, IR Distance, Potentiometers).
+Logger: Provides leveled logging (INFO, WARN, ERROR, DEBUG) to keep the Serial output clean.
 
-```cpp
-SignalFilter filter(10); // Window size: 10 samples
+  Installation
+Download the repository as a .ZIP file.
 
-// ... inside loop ...
-int cleanData = filter.filter(analogRead(A0));
-```
+Open Arduino IDE.
 
----
+Navigate to Sketch -> Include Library -> Add .ZIP Library...
 
-## Compatibility
+Select the downloaded file.
 
-This library is written in standard C++ and depends only on the **Arduino Core API**.
+Restart Arduino IDE.
 
-Tested on:
+  License
+This project is open-source and licensed under the Apache License 2.0. You are free to use, modify, and distribute this software for private or commercial purposes.
 
-- Robotis OpenCM9.04 (STM32F103)
-- Arduino Uno / Nano / Mega (AVR)
-- STM32 Blue Pill
+See the LICENSE file for details.
 
----
+Maintained by: Furkan
 
-## License
-
-This project is licensed under the **Apache License 2.0**.
-
-You are free to use, modify, and distribute this software in **private or commercial projects**.
-
-See the `LICENSE` file for details.
-
----
-
-## Author
-
-**Furkan**
-
-Built for embedded systems enthusiasts.
+Built for serious robotics development.

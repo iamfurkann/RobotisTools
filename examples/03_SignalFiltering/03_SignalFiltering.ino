@@ -1,48 +1,49 @@
 /*
  * RobotisTools - Example 03: Signal Filtering
- * * This sketch demonstrates the 'SignalFilter' class which implements
- * a Moving Average Filter. It is useful for smoothing out noisy 
- * sensor data (e.g., LDR, Distance Sensor, Battery Voltage).
- * * Instructions:
- * 1. Upload the code.
- * 2. Open 'Tools > Serial Plotter' (baud 9600).
- * 3. Observe the Blue line (Noisy) vs Red line (Filtered).
- * * Author: iamfurkann
- * License: Apache-2.0
+ *
+ * Demonstrates the Moving Average Filter and SimpleTimer.
+ * Essential for noisy sensors like LDR, Distance, or Potentiometers.
+ *
+ * Instructions:
+ * 1. Upload code.
+ * 2. Open "Tools > Serial Plotter".
+ * 3. Observe Blue (Raw) vs Red (Filtered) lines.
+ *
+ * Author: Furkan
+ * License: Apache 2.0
  */
 
 #include <RobotisTools.h>
 
-// Create a filter with a window size of 20 samples.
-// Larger size = Smoother line but slower reaction.
-// Smaller size = Faster reaction but more noise.
-SignalFilter sensorFilter(20);
+// Create a filter with window size of 20 samples.
+// Larger window = Smoother line but slower reaction.
+SignalFilter myFilter(20);
 
-// Timer to control print speed (e.g., 50ms)
-SimpleTimer plotTimer(50);
+// Timer to control print speed
+SimpleTimer plotTimer(50); // 50ms
 
 void setup() {
   Serial.begin(9600);
-  sensorFilter.begin();
+  myFilter.begin(); // Allocate memory
   
-  Serial.println("Raw,Filtered"); // Legend for Serial Plotter
+  // Legend for Serial Plotter
+  Serial.println("Raw,Filtered");
 }
 
 void loop() {
-  // 1. Simulate a Noisy Sensor
-  // Generate a base sine wave + random noise
-  int baseSignal = 50 * sin(millis() / 1000.0) + 100; // Sine wave center at 100
-  int noise = random(-20, 20); // Random noise between -20 and +20
-  int rawValue = baseSignal + noise;
+  // 1. Simulate a Noisy Sensor (e.g., Sine wave + Random noise)
+  float sineWave = 50.0 * sin(millis() / 1000.0) + 100.0;
+  int noise = random(-20, 20);
+  int rawValue = (int)sineWave + noise;
 
   // 2. Apply Filter
-  int filteredValue = sensorFilter.filter(rawValue);
+  int cleanValue = myFilter.filter(rawValue);
 
-  // 3. Visualize using SimpleTimer
-  // Using a timer prevents flooding the Serial port, unlike delay().
-  if (plotTimer.isReady()) {
-    Serial.print(rawValue);       // Blue Line
-    Serial.print(","); 
-    Serial.println(filteredValue); // Red Line (Smoothed)
+  // 3. Print for Serial Plotter
+  if (plotTimer.isReady()) 
+  {
+    Serial.print(rawValue);
+    Serial.print(",");
+    Serial.println(cleanValue);
   }
 }

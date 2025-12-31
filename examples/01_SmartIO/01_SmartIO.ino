@@ -1,47 +1,55 @@
 /*
  * RobotisTools - Example 01: Smart I/O
- * * This sketch demonstrates how to use the 'Button' and 'Led' classes
- * to handle inputs and outputs without blocking the processor.
- * * Features demonstrated:
- * - Debounced button reading (isPressed)
- * - Long press detection (isHeld)
- * - Non-blocking LED blinking and toggling
- * * Author: iamfurkann
- * License: Apache-2.0
+ *
+ * Demonstrates the non-blocking capabilities of Button and Led classes.
+ * - Debounced button reading (No more flickering).
+ * - Long Press detection.
+ * - Asynchronous LED blinking.
+ *
+ * Hardware Required:
+ * - 1x Push Button (Connected to BOARD_BUTTON_PIN)
+ * - 1x LED (Connected to BOARD_LED_PIN)
+ *
+ * Author: Furkan
+ * License: Apache 2.0
  */
 
 #include <RobotisTools.h>
 
-// Initialize objects with pin numbers
-// BOARD_BUTTON_PIN and BOARD_LED_PIN are specific to Robotis OpenCM9.04
-// If using Arduino Uno/Mega, use specific pin numbers (e.g., 2 and 13).
+// Define Hardware Objects
+// Note: BOARD_BUTTON_PIN is specific to OpenCM. Change to pin number for Arduino.
 Button userBtn(BOARD_BUTTON_PIN);
 Led statusLed(BOARD_LED_PIN);
 
 void setup() {
-  // Initialize hardware pins
+  // Initialize Serial for debug
+  Serial.begin(9600);
+  while (!Serial); // Wait for USB connection
+
+  // Initialize Hardware
   userBtn.begin();
   statusLed.begin();
 
-  // Optional: Serial for debugging
-  Serial.begin(9600);
-  Serial.println("--- Example 01: Smart I/O Started ---");
-  Serial.println("Press button to TOGGLE LED.");
-  Serial.println("Hold button (500ms) to BLINK LED.");
+  Serial.println("--- Example 01 Started ---");
+  Serial.println("[1] Press button to TOGGLE LED.");
+  Serial.println("[2] Hold button (500ms) to BLINK LED.");
 }
 
 void loop() {
-  // 1. Single Click Event
+  // 1. Check for Single Click
   // isPressed() handles debouncing automatically.
-  if (userBtn.isPressed()) {
-    Serial.println("Event: Single Click -> Toggle LED");
+  if (userBtn.isPressed()) 
+  {
+    Serial.println(">> Event: Button Clicked -> Toggling LED");
     statusLed.toggle();
   }
 
-  // 2. Long Press (Hold) Event
-  // isHeld(duration) checks if the button is held down for 'duration' ms.
-  if (userBtn.isHeld(500)) {
-    // blink(interval) is non-blocking. It won't stop the code execution.
+  // 2. Check for Long Press (Hold)
+  // isHeld(duration) checks if button is held down for X ms.
+  if (userBtn.isHeld(500)) 
+  {
+    // blink(interval) sets the LED to blink mode asynchronously.
+    // It does NOT block the loop.
     statusLed.blink(100); 
   }
 }
