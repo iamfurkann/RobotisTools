@@ -1,130 +1,187 @@
-  RobotisTools Framework
-RobotisTools is a professional, modular, and event-driven C++ framework designed for embedded robotics. It transforms standard linear Arduino code into a robust Mini-OS architecture.
+## RobotisTools — Embedded Robotics Utility Library
 
-Originally optimized for Robotis OpenCM9.04, this library is fully cross-platform and compatible with any Arduino-based hardware (AVR, ESP32, STM32, Teensy).
+RobotisTools is a modular, event-driven C++ utility library that turns linear Arduino sketches into a lightweight "mini-OS" for robotics projects. It provides a cooperative task scheduler, non-blocking hardware drivers, a safe serial command parser, and a set of utility classes for control and filtering.
 
-The Problem: Standard Arduino code often becomes "spaghetti code" when managing multiple sensors, motors, and serial commands simultaneously using delay().
+This README is aimed at developers who want an overview of the library, its architecture, quick usage tips, and instructions for installing and running the examples.
 
-The Solution: RobotisTools provides a Cooperative Task Scheduler, a Safe Command Line Interface, and Non-blocking Hardware Drivers to handle complex robotic tasks effortlessly.
+Table of Contents
+- Motivation
+- Key Features
+- Architecture and Core Concepts
+- Quick Start (Arduino example)
+- API & Module Highlights
+- Examples
+- Installation (Arduino IDE & PlatformIO)
+- Project layout
+- Contribution & Testing
+- License
 
-  System Architecture
-The library is organized into three logical layers:
+### Motivation
 
-Layer	Modules	Description
-1. CORE	RobotisApp, TaskManager, Logger, SerialCommander	The brain of the system. Manages tasks, logs, and CLI commands.
-2. HARDWARE	Button, Led, SmartAnalog, AsyncSonar, BatteryMonitor	Intelligent drivers for physical components. Handles debounce, hysteresis, and async triggers.
-3. UTILITIES	FastPID, DiffDrive, SignalFilter, ConfigStore, SimpleTimer	Pure mathematical and helper classes for control theory, filtering, and data storage.
-🚀 Quick Start
-Here is a complete example showing how to set up a multitasking robot system.
+Standard Arduino sketches often grow into blocking, hard-to-maintain programs when multiple sensors, actuators, and serial commands run together. RobotisTools addresses this by providing:
+- Cooperative scheduling (no blocking delays inside tasks)
+- Safe, fixed-buffer serial command parsing (avoid dynamic String allocations)
+- Non-blocking drivers for common sensors and actuators
 
-C++
+The result is cleaner, deterministic behavior suitable for robots with multiple concurrent responsibilities.
+
+### Key Features
+
+- Cooperative Task Scheduler (TaskManager) with timed callbacks
+- RobotisApp facade that aggregates core services: task scheduling, logging, serial command handling
+- Non-blocking Hardware Drivers: Led, Button (debounce/long-press), SmartAnalog (hysteresis), AsyncSonar (HC-SR04), BatteryMonitor
+- Utilities: FastPID (anti-windup), DiffDrive kinematics, SignalFilter (moving average), ConfigStore (EEPROM persistence), SimpleTimer
+- Minimal heap usage: uses fixed-size buffers where possible to reduce heap fragmentation
+- Cross-platform: AVR, ESP32, STM32, Teensy, and typical Arduino-compatible boards
+
+### Architecture and Core Concepts
+
+Layers:
+- CORE: RobotisApp, TaskManager, Logger, SerialCommander
+- HARDWARE: drivers for physical components
+- UTILITIES: helper libraries and mathematical tools
+
+Heartbeat
+- The system relies on a single heartbeat call: app.update(). Call this frequently from `loop()` to keep tasks, serial parsing, and timers running.
+
+Non-blocking design
+- Avoid `delay()` inside tasks. Use the scheduler or timers for long-running workflows.
+
+RobotisApp facade
+- Use `RobotisApp` to initialize and access common subsystems (example usage below).
+
+### Quick Start (Arduino)
+
+This minimal sketch shows the recommended usage pattern. Replace `BOARD_LED_PIN` and `BOARD_BUTTON_PIN` with your board's definitions or pin numbers.
+
+```cpp
 #include <RobotisTools.h>
 
-// 1. Initialize the Kernel (App)
-RobotisApp app(115200); // Set baud rate
+// Kernel
+RobotisApp app(115200);
 
-// 2. Define Hardware
+// Hardware instances
 Led statusLed(BOARD_LED_PIN);
 Button userBtn(BOARD_BUTTON_PIN);
 
-// 3. Define Logic
-void blinkTask() {
-    statusLed.toggle();
-}
+// Tasks
+void blinkTask() { statusLed.toggle(); }
+void reportTask() { app.log("Uptime (s)", millis() / 1000); }
 
-void reportTask() {
-    // Uses the internal Logger module
-    app.log("System Uptime (sec)", millis() / 1000);
-}
-
-void cmdStop() {
-    app.log(">> Emergency Stop Command Received!");
-    statusLed.turnOff();
-}
+// Serial command
+void cmdStop() { app.log("Emergency stop"); statusLed.turnOff(); }
 
 void setup() {
-    // Start System & Hardware
-    app.begin();
-    statusLed.begin();
-    userBtn.begin();
+  app.begin();
+  statusLed.begin();
+  userBtn.begin();
 
-    // Schedule Tasks (No delay!)
-    app.addTask(blinkTask, 500);   // Blink every 500ms
-    app.addTask(reportTask, 2000); // Report every 2 seconds
+  // Add periodic tasks (non-blocking)
+  app.addTask(blinkTask, 500);
+  app.addTask(reportTask, 2000);
 
-    // Register Serial Command
-    app.addCommand("stop", cmdStop);
+  // Register a simple serial command
+  app.addCommand("stop", cmdStop);
 }
 
 void loop() {
-    // [CRITICAL] The System Heartbeat
-    app.update();
-    
-    // Manual Override
-    if (userBtn.isPressed()) {
-        app.log("Manual Button Override!");
-    }
+  // Heartbeat — required
+  app.update();
+
+  // Local checks can still be performed synchronously if short
+  if (userBtn.isPressed()) {
+    app.log("Manual override");
+  }
 }
-  Core Concepts
-The app.update() Heartbeat
+```
 
-Unlike standard Arduino sketches, RobotisTools relies on a Cooperative Scheduler.
+Notes
+- Keep task callbacks short and non-blocking.
+- Use `app.addTask(func, interval_ms)` for repeated tasks or `addOneShot`/timers where available.
 
-You must call app.update() inside loop().
+### API & Module Highlights
 
-This function acts as the "Operating System." It checks if any task needs to run, processes incoming Serial commands, and manages internal timers.
+Core
+- RobotisApp
+  - begin(), update(), addTask(...), addCommand(name, callback), log(...)
+- TaskManager
+  - schedule tasks and manage their timing
+- Logger
+  - leveled logging: INFO, WARN, ERROR, DEBUG
+- SerialCommander
+  - parse textual commands from Serial and invoke registered handlers using fixed buffers
 
-Do not use delay() inside your tasks, as it will pause the entire system "heartbeat."
+Hardware drivers (examples)
+- Button: start(), isPressed(), onLongPress(), debounce handling
+- Led: begin(), turnOn(), turnOff(), toggle(), blink() (non-blocking)
+- SmartAnalog: stable thresholding and hysteresis
+- AsyncSonar: trigger/read without blocking
+- BatteryMonitor: read voltage with noise filtering and percent estimation
 
-The RobotisApp Kernel
+Utilities
+- FastPID: PID controller with anti-windup and derivative-on-measurement
+- DiffDrive: helper to convert joystick inputs to left/right motor commands
+- SignalFilter: moving average / simple filters
+- ConfigStore<T>: template for EEPROM-backed persistence
 
-Instead of managing the TaskManager, Logger, and SerialCommander separately, the RobotisApp class acts as a Facade. You control the entire system through the app object.
+For a complete API reference, see the header files in `src/` (particularly `src/Core/`, `src/Hardware/`, and `src/Utils/`). If you want, I can generate a brief function/class reference automatically from headers.
 
-📚 Module Reference
-🔌 Hardware Drivers
+### Examples
 
-Button: Handles debouncing (noise filtering) and detects Long Press / Hold events.
+Example sketches live in the `examples/` directory. They demonstrate common patterns and best practices:
+- `01_SmartIO` — basic I/O and SmartAnalog usage
+- `02_MultitaskingOS` — scheduler and task examples
+- `03_SignalFiltering` — using SignalFilter and FastPID
+- `04_AdvancedSensors`, `05_FullRobot`, etc.
 
-SmartAnalog: Implements Schmitt Trigger (Hysteresis) logic to prevent sensor flickering at threshold levels. Auto-detects 10-bit vs 12-bit ADC.
+Run an example in the Arduino IDE by opening the example `.ino` file and selecting the correct board/port.
 
-BatteryMonitor: Reads battery voltage via a divider, applies a noise filter, and calculates remaining percentage (0-100%).
+### Installation
 
-AsyncSonar: A non-blocking driver for HC-SR04 ultrasonic sensors. Uses a state machine for triggering.
+Arduino IDE
+1. Download repository as ZIP or clone the repo.
+2. In Arduino IDE: Sketch -> Include Library -> Add .ZIP Library... (choose the repo ZIP) or copy this project into your Arduino `libraries/` folder.
+3. Restart the Arduino IDE, then open an example from `examples/`.
 
-Led: Asynchronous control (Toggle, Blink) without blocking execution.
+PlatformIO
+1. Clone the repo into your project or add `src/` to your PlatformIO project's source path.
+2. Include headers with `#include <RobotisTools.h>` and configure your `platformio.ini` with the target board.
 
-🛠️ Utilities & Math
+Notes
+- Some examples assume board-specific macros like `BOARD_LED_PIN`. Replace them with the appropriate pin numbers or define the macros in your build settings.
 
-FastPID: A high-performance PID controller with Integral Windup Guard and Derivative on Measurement to prevent kicks.
+### Project layout
 
-DiffDrive: Computes kinematics for tank-drive/differential robots. Converts Joystick (X, Y) to Left/Right motor speeds with Deadband support.
+Top-level (source files):
+- `src/RobotisTools.h` — main umbrella header
+- `src/Core/` — RobotisApp, TaskManager, Logger, SerialCommander, TaskManager
+- `src/Hardware/` — Led, Button, AsyncSonar, BatteryMonitor, SmartAnalog
+- `src/Utils/` — FastPID, DiffDrive, SignalFilter, ConfigStore, SimpleTimer
+- `examples/` — example sketches
 
-SignalFilter: Implements a Moving Average Filter to smooth out noisy sensor data.
+### Contribution & Testing
 
-ConfigStore: A C++ Template class to save/load complex data structures (Structs) to EEPROM effortlessly.
+Contributions are welcome. A suggested workflow:
+- Fork the repo, create a feature branch, make small focused changes, open a pull request.
+- Describe the change and include example usage or test sketches.
 
-  System Core
+Testing
+- Many changes can be verified on real hardware using the example sketches.
+- For unit-like tests of pure utility code (FastPID, SignalFilter), you can create small host-side tests if ported to a desktop test harness.
 
-SerialCommander: Parses text commands from Serial Monitor (e.g., "start", "set_pid"). Uses fixed buffers to prevent Heap Fragmentation (No String usage).
+If you want, I can add a basic CONTRIBUTING.md with a checklist and a simple test scaffold for utilities.
 
-Logger: Provides leveled logging (INFO, WARN, ERROR, DEBUG) to keep the Serial output clean.
+### License
 
-  Installation
-Download the repository as a .ZIP file.
+This project is licensed under the Apache License 2.0 — see the bundled `LICENSE` file for details.
 
-Open Arduino IDE.
+---
 
-Navigate to Sketch -> Include Library -> Add .ZIP Library...
+Maintainer: Furkan (iamfurkann)
 
-Select the downloaded file.
+If you'd like, I can also:
+- Generate a short English API reference extracted from headers
+- Create a separate `README.tr.md` with the Turkish content preserved
+- Add short descriptions to each example file automatically
 
-Restart Arduino IDE.
-
-  License
-This project is open-source and licensed under the Apache License 2.0. You are free to use, modify, and distribute this software for private or commercial purposes.
-
-See the LICENSE file for details.
-
-Maintained by: Furkan
-
-Built for serious robotics development.
+Tell me which of these you'd like next and I'll proceed.
