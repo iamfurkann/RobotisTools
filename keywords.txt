@@ -1,29 +1,90 @@
 #######################################
 # Datatypes (Classes)	KEYWORD1
 #######################################
-Button	KEYWORD1
-Led	KEYWORD1
-SimpleTimer	KEYWORD1
-SignalFilter	KEYWORD1
+
+RobotisApp	KEYWORD1
 TaskManager	KEYWORD1
 SerialCommander	KEYWORD1
+Logger	KEYWORD1
+
+Button	KEYWORD1
+Led	KEYWORD1
+SmartAnalog	KEYWORD1
+BatteryMonitor	KEYWORD1
+AsyncSonar	KEYWORD1
+
+SimpleTimer	KEYWORD1
+SignalFilter	KEYWORD1
+FastPID	KEYWORD1
+DiffDrive	KEYWORD1
+ConfigStore	KEYWORD1
 
 #######################################
 # Methods and Functions	KEYWORD2
 #######################################
 
 begin	KEYWORD2
+update	KEYWORD2
+addTask	KEYWORD2
+addCommand	KEYWORD2
+log	KEYWORD2
+getLogger	KEYWORD2
+
+run	KEYWORD2
+check	KEYWORD2
+
+setLevel	KEYWORD2
+error	KEYWORD2
+warn	KEYWORD2
+info	KEYWORD2
+debug	KEYWORD2
+
 isPressed	KEYWORD2
 isHeld	KEYWORD2
+
 turnOn	KEYWORD2
 turnOff	KEYWORD2
 toggle	KEYWORD2
 blink	KEYWORD2
+
+setThreshold	KEYWORD2
+setInvert	KEYWORD2
+readRaw	KEYWORD2
+readSmooth	KEYWORD2
+readPercentage	KEYWORD2
+isActive	KEYWORD2
+
+getVoltage	KEYWORD2
+isLow	KEYWORD2
+
+startMeasure	KEYWORD2
+getDistance	KEYWORD2
+
 setInterval	KEYWORD2
 isReady	KEYWORD2
 reset	KEYWORD2
+
 filter	KEYWORD2
-addTask	KEYWORD2
-run	KEYWORD2
-addCommand	KEYWORD2
-check	KEYWORD2
+
+setOutputLimits	KEYWORD2
+setTunings	KEYWORD2
+compute	KEYWORD2
+
+setDeadband	KEYWORD2
+getLeft	KEYWORD2
+getRight	KEYWORD2
+
+load	KEYWORD2
+save	KEYWORD2
+get	KEYWORD2
+factoryReset	KEYWORD2
+
+#######################################
+# Constants (Literals)	LITERAL1
+#######################################
+
+LOG_LEVEL_NONE	LITERAL1
+LOG_LEVEL_ERROR	LITERAL1
+LOG_LEVEL_WARN	LITERAL1
+LOG_LEVEL_INFO	LITERAL1
+LOG_LEVEL_DEBUG	LITERAL1
